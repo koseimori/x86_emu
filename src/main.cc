@@ -4,40 +4,11 @@
 #include <string>
 #include <fstream>
 
+#include "emulator.hpp"
+#include "instructions.hpp"
+
 using namespace std;
 
-enum Register
-{
-    EAX,
-    ECX,
-    EDX,
-    EBX,
-    ESP,
-    EBP,
-    ESI,
-    EDI,
-    REGISTER_COUNT,
-};
-
-vector<string> registers_name = {
-    "EAX",
-    "ECX",
-    "EDX",
-    "EBX",
-    "ESP",
-    "EBP",
-    "ESI",
-    "EDI",
-};
-
-class Emulator
-{
-public:
-    vector<uint32_t> registers;
-    uint32_t eflags;
-    vector<uint8_t> memory;
-    uint32_t eip;
-};
 
 void init_emu(Emulator* emu, size_t size, uint32_t eip, uint32_t esp)
 {
@@ -81,25 +52,7 @@ int32_t get_sign_code32(Emulator *emu, int32_t index) {
     return (int32_t)get_code32(emu, index);
 }
 
-void mov_r32_imm32(Emulator *emu)
-{
-    uint8_t reg = get_code8(emu, 0) - 0xb8;
-    uint32_t value = get_code32(emu, 1);
-    emu->registers.at(reg) = value;
-    emu->eip += 5;
-}
 
-void short_jump(Emulator *emu)
-{
-    int8_t diff = get_sign_code8(emu, 1);
-    emu->eip += diff + 2;
-}
-
-void near_jump(Emulator *emu)
-{
-    int32_t diff = get_sign_code32(emu, 1);
-    emu->eip += (diff + 5);
-}
 
 int main(int argc, char *argv[])
 {
@@ -123,14 +76,6 @@ int main(int argc, char *argv[])
         infile.read((char *)(&emu_ptr->memory.at(i)), sizeof(emu_ptr->memory.at(i)));
     }
     infile.close();
-
-    typedef void instruction_func_t(Emulator *);
-    vector<instruction_func_t *> instructions = vector<instruction_func_t *>(0x0100);
-    for (int i = 0; i < 8; ++i) {
-        instructions.at(0xb8 + i) = mov_r32_imm32;
-    }
-    instructions.at(0xe9) = near_jump;
-    instructions.at(0xeb) = short_jump;
 
     while (emu_ptr->eip < MEMORY_SIZE) {
         uint8_t code = get_code8(emu_ptr, 0);
